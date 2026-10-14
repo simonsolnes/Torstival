@@ -10,7 +10,7 @@ export PATH := JAVA_HOME / "bin:" + env_var("PATH")
 default:
     @just --list
 
-# Install the exact locked dependencies (first checkout: use deps-lock).
+# Install the exact locked dependencies on a fresh checkout.
 setup:
     npm ci
 
@@ -123,6 +123,12 @@ run-ios device="booted":
     xcrun simctl install {{quote(device)}} dist/Torstival.app
     xcrun simctl launch --terminate-running-process {{quote(device)}} no.solnes.torstival
 
+# Cold launch, require the app to remain alive, and capture the rendered screen.
+smoke-ios device="booted": (run-ios device)
+    sleep 10
+    xcrun simctl spawn {{quote(device)}} launchctl list | awk '$1 ~ /^[0-9]+$/ && index($3, "UIKitApplication:no.solnes.torstival[") == 1 { print; found = 1 } END { exit !found }'
+    just screenshot-ios {{quote(device)}}
+
 # Capture the current iOS screen for visual review.
 screenshot-ios device="booted":
     mkdir -p dist
@@ -145,6 +151,10 @@ boot-ios device:
 # Shut down a simulator selected by UUID.
 shutdown-ios device:
     xcrun simctl shutdown {{quote(device)}}
+
+# Recover an unresponsive CoreSimulator service (interrupts local simulators).
+recover-ios-simulator:
+    killall -TERM com.apple.CoreSimulator.CoreSimulatorService
 
 # Inspect the latest native build output.
 logs:

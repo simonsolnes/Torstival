@@ -32,10 +32,12 @@ The justfile defaults to Homebrew's Apple Silicon JDK 21 and
 | `just build-ios` | Build `dist/Torstival.app` for the iOS simulator |
 | `just verify-ios` | Verify the simulator app contains its JavaScript bundle |
 | `just run-ios` | Install and open the app in a booted simulator |
+| `just smoke-ios UUID` | Cold-launch, check the app stays alive, and capture its screen |
 | `just screenshot-ios` | Save a simulator screenshot in `dist/` |
 | `just devices` | List connected Android devices and local iOS simulators |
 | `just boot-ios UUID` | Boot a specific iOS simulator |
 | `just shutdown-ios UUID` | Shut down that simulator |
+| `just recover-ios-simulator` | Restart a stuck local simulator service (interrupts simulators) |
 | `just logs` | Inspect saved native build logs |
 | `just logs-ios UUID` | Inspect app runtime logs in a specific simulator |
 | `just build-ios-device` | Compile an unsigned release build for physical iOS hardware |
