@@ -23,6 +23,14 @@ deps-lock:
 deps-add package:
     npx --no-install expo install {{quote(package)}}
 
+# Legg til et lokalt utviklingsverktøy.
+deps-add-dev package:
+    npm install --save-dev {{quote(package)}}
+
+# Lag appikonene fra fotballtegningen.
+generate-icons:
+    node scripts/generate-icons.cjs
+
 # Regenerate the short bundled iOS beep from its deterministic waveform.
 generate-beep:
     node scripts/generate-beep.cjs
@@ -124,6 +132,13 @@ verify-apk:
 # Install on an attached Android phone (USB debugging enabled).
 install-android:
     "$ANDROID_HOME/platform-tools/adb" install -r dist/torstival.apk
+
+# Vis APK-ens offentlige signeringssertifikat, uten å vise private nøkler.
+signing-info:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    apksigner="$(find "$ANDROID_HOME/build-tools" -name apksigner -type f | sort | tail -1)"
+    "$apksigner" verify --print-certs dist/torstival.apk
 
 # Install native iOS dependencies locally.
 pods: prebuild-ios prepare-ios

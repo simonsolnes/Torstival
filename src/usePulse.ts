@@ -26,7 +26,7 @@ const clock: Clock = {
 
 async function allowTorch(notices: string[]): Promise<boolean> {
   if (!native.hasTorch()) {
-    notices.push('No rear flashlight is available on this device.');
+    notices.push('Enheten har ingen lommelykt på baksiden.');
     return false;
   }
   const granted = android
@@ -42,7 +42,7 @@ async function allowTorch(notices: string[]): Promise<boolean> {
       const timeout = setTimeout(finish, 2000);
     });
   }
-  if (!granted) notices.push('Flashlight is off. Allow Camera in Settings to enable it.');
+  if (!granted) notices.push('Lommelykten er av. Tillat kameratilgang i Innstillinger.');
   return granted;
 }
 
@@ -82,7 +82,7 @@ export function usePulse() {
     setRemainingMs(0);
     setBusy(true);
     try { await native.stop(); }
-    catch { if (mounted.current) setMessage('Could not stop the pulse. Try Stop again or use the notification.'); }
+    catch { if (mounted.current) setMessage('Kunne ikke stoppe. Prøv igjen eller bruk varselet.'); }
     finally { if (mounted.current) setBusy(false); }
   }, []);
 
@@ -143,11 +143,11 @@ export function usePulse() {
       setFlashing(flash && current.screen && visible);
       if (!flash || !visible) return;
       if (current.vibrate || current.sound) void native.pulseFeedback(current.vibrate, current.sound).catch(() => {
-        if (!cancelled) setMessage('Sound or vibration unavailable.');
+        if (!cancelled) setMessage('Lyd eller vibrasjon er utilgjengelig.');
       });
       if (current.torch) void native.pulseTorch().then(ok => {
-        if (!ok && !cancelled) setMessage('Flashlight unavailable. It may be in use or too warm.');
-      }).catch(() => { if (!cancelled) setMessage('Flashlight unavailable.'); });
+        if (!ok && !cancelled) setMessage('Lommelykten er opptatt eller for varm.');
+      }).catch(() => { if (!cancelled) setMessage('Lommelykten er utilgjengelig.'); });
     }, clock, next => { deadline = next; });
     const countdown = setInterval(() => setRemainingMs(Math.max(0, deadline - clock.now())), 50);
     const cleanup = () => {
@@ -181,7 +181,7 @@ export function usePulse() {
     } catch {
       if (mounted.current && token === operation.current) {
         applyOptions(previous);
-        setMessage('Could not change the setting. Try again.');
+        setMessage('Kunne ikke endre innstillingen. Prøv igjen.');
       }
     } finally {
       updatingRef.current = false;
@@ -201,11 +201,11 @@ export function usePulse() {
       if (next.torch) next.torch = await allowTorch(notices);
       if (android && Number(Platform.Version) >= 33) {
         const permission = await PermissionsAndroid.request(PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS);
-        if (permission !== PermissionsAndroid.RESULTS.GRANTED) notices.push('Notifications are off. Return here to stop the interval.');
+        if (permission !== PermissionsAndroid.RESULTS.GRANTED) notices.push('Varsler er slått av. Gå tilbake hit for å stoppe.');
       }
       if (!mounted.current || token !== operation.current) return;
       if (AppState.currentState !== 'active') {
-        setMessage('Return to Torstival and press Start to begin.');
+        setMessage('Gå tilbake til Torstival og trykk Start.');
         return;
       }
       applyOptions(next);
@@ -213,7 +213,7 @@ export function usePulse() {
       if (android) await native.start(intervalMs, next.vibrate, next.torch, next.sound, next.screen);
       else setRunning(true);
     } catch {
-      if (mounted.current) setMessage('Could not start the interval. Keep the app open and try again.');
+      if (mounted.current) setMessage('Kunne ikke starte. Hold appen åpen og prøv igjen.');
     } finally { if (mounted.current) setBusy(false); }
   };
 

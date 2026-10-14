@@ -163,7 +163,7 @@ class PulseServiceTest {
     val notifications = shadowOf(service.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager)
     val notification = notifications.getNotification(PulseService.NOTIFICATION_ID)
     assertNotNull(notification)
-    assertEquals("Stop", notification.actions.single().title)
+    assertEquals("Stopp", notification.actions.single().title)
     val stopIntent = shadowOf(notification.actions.single().actionIntent).savedIntent
     assertEquals(PulseService.STOP, stopIntent.action)
     service.onStartCommand(stopIntent, 0, 2)

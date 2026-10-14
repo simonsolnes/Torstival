@@ -15,10 +15,10 @@ class TorstivalPulseModule : Module() {
     }
     AsyncFunction("start") { intervalMs: Double, vibrate: Boolean, torch: Boolean, sound: Boolean, screen: Boolean ->
       require(intervalMs.isFinite() && intervalMs in 1000.0..3_600_000.0)
-      val activity = appContext.currentActivity ?: error("Open Torstival before starting an interval.")
+      val activity = appContext.currentActivity ?: error("Åpne Torstival før du starter.")
       // Permission results may arrive before window focus returns. Android
       // enforces the foreground-start restriction; focus is not a visibility test.
-      check(!activity.isFinishing && !activity.isDestroyed) { "Open Torstival before starting an interval." }
+      check(!activity.isFinishing && !activity.isDestroyed) { "Åpne Torstival før du starter." }
       val intent = Intent(activity, PulseService::class.java).setAction(PulseService.START)
         .putExtra("intervalMs", intervalMs.toLong()).putExtra("vibrate", vibrate).putExtra("torch", torch)
         .putExtra("sound", sound).putExtra("screen", screen)

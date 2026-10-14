@@ -13,7 +13,7 @@
     <service android:name="no.solnes.pulse.PulseService" android:exported="false"
       android:stopWithTask="false" android:foregroundServiceType="specialUse|camera">
       <property android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
-        android:value="User-started repeating interval timer delivering vibration, beep and flashlight pulses until explicitly stopped, including while the screen is locked." />
+        android:value="Brukerstartet intervalltimer med vibrasjon, lyd og lommelykt inntil brukeren stopper den, også når skjermen er låst." />
     </service>
   </application>
 </manifest>

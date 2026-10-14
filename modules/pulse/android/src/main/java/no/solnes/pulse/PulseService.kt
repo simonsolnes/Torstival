@@ -70,8 +70,8 @@ class PulseService : Service() {
     hardware = PulseHardware(this)
     instance = this
     if (Build.VERSION.SDK_INT >= 26) {
-      val channel = NotificationChannel(CHANNEL, "Running interval", NotificationManager.IMPORTANCE_LOW)
-      channel.description = "Shows when your interval is running and lets you stop it."
+      val channel = NotificationChannel(CHANNEL, "Intervallvarsling", NotificationManager.IMPORTANCE_LOW)
+      channel.description = "Viser aktive intervaller og lar deg stoppe dem."
       channel.setSound(null, null)
       channel.enableVibration(false)
       getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
@@ -89,7 +89,7 @@ class PulseService : Service() {
       state = PulseState(intervalMs = intervalMs, vibrate = intent.getBooleanExtra("vibrate", true), torch = torch,
         sound = intent.getBooleanExtra("sound", true),
         screen = intent.getBooleanExtra("screen", true),
-        warning = if (requestedTorch && !torch) "Camera permission is needed for the flashlight." else null)
+        warning = if (requestedTorch && !torch) "Lommelykten krever kameratilgang." else null)
       promoteForeground(torch)
       wakeLock = (getSystemService(POWER_SERVICE) as PowerManager)
         .newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "Torstival:Interval").apply {
@@ -101,7 +101,7 @@ class PulseService : Service() {
       state = state.copy(running = true, deadline = timer.deadline)
       handler.postDelayed(beat, maxOf(1, timer.deadline - SystemClock.elapsedRealtime()))
     } catch (_: Exception) {
-      state = state.copy(warning = "Could not start the interval. Open the app and try again.")
+      state = state.copy(warning = "Kunne ikke starte. Åpne appen og prøv igjen.")
       finish()
     }
     // Never silently restart after force-stop, process death, or a reboot.
@@ -111,14 +111,14 @@ class PulseService : Service() {
   internal fun updateOptions(vibrate: Boolean, requestedTorch: Boolean, sound: Boolean, screen: Boolean) {
     if (!state.running) return
     var torch = requestedTorch && checkSelfPermission(Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED
-    var warning: String? = if (requestedTorch && !torch) "Camera permission is needed for the flashlight." else null
+    var warning: String? = if (requestedTorch && !torch) "Lommelykten krever kameratilgang." else null
     if (torch != state.torch) {
       try {
         // Add camera access while the activity is visible, without replacing the timer.
         promoteForeground(torch)
       } catch (_: Exception) {
         torch = false
-        warning = "Flashlight unavailable. Open the app and try again."
+        warning = "Lommelykten er utilgjengelig. Åpne appen og prøv igjen."
       }
     }
     hardware.disableOutputs(vibrate, torch, sound)
@@ -144,11 +144,11 @@ class PulseService : Service() {
       PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
     val builder = if (Build.VERSION.SDK_INT >= 26) Notification.Builder(this, CHANNEL) else Notification.Builder(this)
     return builder.setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
-      .setContentTitle("Torstival is running")
-      .setContentText("Pulse every ${state.intervalMs / 1000.0} seconds • Tap Stop to finish")
+      .setContentTitle("Torstival er aktiv")
+      .setContentText("Intervall ${state.intervalMs / 60_000}:${((state.intervalMs / 1000) % 60).toString().padStart(2, '0')} • Trykk Stopp")
       .setContentIntent(content).setOngoing(true).setOnlyAlertOnce(true)
       .setCategory(Notification.CATEGORY_SERVICE)
-      .addAction(Notification.Action.Builder(null, "Stop", stop).build())
+      .addAction(Notification.Action.Builder(null, "Stopp", stop).build())
       .build()
   }
 

@@ -9,3 +9,4 @@ Build release binaries with embedded JavaScript; do not start a development
 server unless the user explicitly asks for one.
 
 Keep README.md to one sentence and release notes to one very short sentence.
+All user-facing copy, the README and release notes must use Norwegian Bokmål.

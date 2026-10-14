@@ -23,7 +23,7 @@ public final class TorstivalPulseModule: Module {
       if sound {
         if self.audio == nil {
           guard let url = Bundle.main.url(forResource: "torstival-beep", withExtension: "wav") else {
-            throw NSError(domain: "TorstivalPulse", code: 1, userInfo: [NSLocalizedDescriptionKey: "Beep resource missing"])
+            throw NSError(domain: "TorstivalPulse", code: 1, userInfo: [NSLocalizedDescriptionKey: "Lydfilen mangler"])
           }
           // Respect the silent switch and mix with any existing audio.
           try AVAudioSession.sharedInstance().setCategory(.ambient, mode: .default)

@@ -40,21 +40,21 @@ internal class PulseHardware(context: Context) {
             @Suppress("DEPRECATION")
             vibrator.vibrate(450, attributes)
           }
-        } else warning = "This device has no vibration motor."
-      } catch (_: Exception) { warning = "Vibration is unavailable. Check the device settings." }
+        } else warning = "Enheten har ingen vibrasjonsmotor."
+      } catch (_: Exception) { warning = "Vibrasjon er utilgjengelig. Sjekk enhetsinnstillingene." }
     }
     if (torch) {
       try {
         val id = torchId ?: findTorch()?.also { torchId = it }
-        if (id == null) warning = "This device has no rear flashlight."
+        if (id == null) warning = "Enheten har ingen lommelykt på baksiden."
         else { cameras.setTorchMode(id, true); torchOn = true }
-      } catch (_: Exception) { warning = "Flashlight unavailable. It may be in use by another app." }
+      } catch (_: Exception) { warning = "Lommelykten er utilgjengelig. En annen app kan bruke den." }
     }
     if (sound) {
       try {
         val generator = tone ?: ToneGenerator(AudioManager.STREAM_MUSIC, 85).also { tone = it }
-        if (!generator.startTone(ToneGenerator.TONE_PROP_BEEP, 180)) warning = "Sound unavailable."
-      } catch (_: Exception) { warning = "Sound unavailable. Check media volume." }
+        if (!generator.startTone(ToneGenerator.TONE_PROP_BEEP, 180)) warning = "Lyd er utilgjengelig."
+      } catch (_: Exception) { warning = "Lyd er utilgjengelig. Sjekk medievolumet." }
     }
     return warning
   }

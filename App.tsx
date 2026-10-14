@@ -41,29 +41,29 @@ export default function App() {
           <ScrollView contentContainerStyle={styles.content}>
             <View style={styles.header}>
               <Text style={styles.brand}>TORSTIVAL</Text>
-              <Text style={styles.status}>{running ? 'Running' : 'Ready'}</Text>
+              <Text style={styles.status}>{running ? 'Aktiv' : 'Klar'}</Text>
             </View>
             <View style={styles.main}>
               <View style={styles.card}>
-                <Text style={styles.label}>{running ? 'NEXT PULSE' : 'INTERVAL'}</Text>
+                <Text style={styles.label}>{running ? 'NESTE SIGNAL' : 'INTERVALL'}</Text>
                 {running ? <View style={styles.countdownContainer}>
                   <Text style={styles.countdown} testID="countdown-value" numberOfLines={1} adjustsFontSizeToFit>
                     {formatCountdown(remainingMs)}
                   </Text>
-                  <Text style={styles.unit}>Every {formatCountdown(intervalMs ?? 0)}</Text>
+                  <Text style={styles.unit}>Intervall: {formatCountdown(intervalMs ?? 0)}</Text>
                 </View> : <View style={styles.pickerRow}>
-                  <TimePicker label="Minutes" value={minutes} max={60} disabled={busy} onChange={setMinutes} />
-                  <TimePicker label="Seconds" value={seconds} max={minutes === 60 ? 0 : 59}
+                  <TimePicker label="Minutter" value={minutes} max={60} disabled={busy} onChange={setMinutes} />
+                  <TimePicker label="Sekunder" value={seconds} max={minutes === 60 ? 0 : 59}
                     disabled={busy || minutes === 60} onChange={setSeconds} />
                 </View>}
-                {intervalMs === null && <Text style={styles.error}>Choose at least 1 second.</Text>}
+                {intervalMs === null && <Text style={styles.error}>Velg minst 1 sekund.</Text>}
               </View>
               <View style={styles.options}>
                 {([
-                  ['Flash screen', 'screen'],
-                  ['Vibration', 'vibrate'],
-                  ['Flashlight', 'torch'],
-                  ['Sound', 'sound'],
+                  ['Skjermblink', 'screen'],
+                  ['Vibrasjon', 'vibrate'],
+                  ['Lommelykt', 'torch'],
+                  ['Lyd', 'sound'],
                 ] as const).map(([label, key]) => <View key={key} style={styles.option}>
                   <Text style={styles.optionText}>{label}</Text>
                   <Switch accessibilityLabel={label} value={options[key]}
@@ -71,16 +71,16 @@ export default function App() {
                     disabled={busy || updating} trackColor={{ true: '#8c75d2', false: '#343842' }} />
                 </View>)}
               </View>
-              <Pressable accessibilityRole="button" accessibilityLabel={running ? 'Stop' : 'Start'}
+              <Pressable accessibilityRole="button" accessibilityLabel={running ? 'Stopp' : 'Start'}
                 accessibilityState={{ disabled, busy }} testID="toggle-button" disabled={disabled}
                 onPress={() => { void (running ? stop() : start()); }}
                 style={({ pressed }) => [styles.button, running && styles.stopButton,
                   disabled && styles.disabledButton, pressed && styles.pressed]}>
                 <Text style={[styles.buttonText, running && styles.stopButtonText]}>
-                  {busy ? 'Please wait…' : running ? 'Stop' : 'Start'}
+                  {busy ? 'Vent litt…' : running ? 'Stopp' : 'Start'}
                 </Text>
               </Pressable>
-              <Text style={styles.note}>{Platform.OS === 'android' ? 'Runs in the background.' : 'Keep the app open.'}</Text>
+              <Text style={styles.note}>{Platform.OS === 'android' ? 'Fortsetter i bakgrunnen.' : 'Hold appen åpen.'}</Text>
               {message && <Text style={styles.error} accessibilityLiveRegion="polite">{message}</Text>}
             </View>
           </ScrollView>

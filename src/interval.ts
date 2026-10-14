@@ -22,7 +22,7 @@ export type Clock = {
 // If the event loop stalls, skip missed beats instead of flashing in a burst.
 export function startFlashes(intervalMs: number, onFlash: (active: boolean) => void, clock: Clock, onDeadline: (deadline: number) => void = () => {}) {
   if (!Number.isFinite(intervalMs) || intervalMs < 1000 || intervalMs > 3_600_000) {
-    throw new RangeError('Interval must be between 1 and 3600 seconds.');
+    throw new RangeError('Intervallet må være mellom 1 og 3600 sekunder.');
   }
   let stopped = false;
   let deadline = clock.now() + intervalMs;
