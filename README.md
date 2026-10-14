@@ -60,6 +60,9 @@ Set `TORSTIVAL_TEST_JAVA_HOME` if your JDK 21 is installed elsewhere.
 | `just deps-align` | Align dependency versions to the installed Expo SDK |
 | `just audit` | Inspect dependency security advisories |
 | `just clean` | Remove generated output while preserving signing keys |
+| `just push` | Push main to origin |
+| `just release` | Verify the local APK, push main and publish a GitHub release with the APK |
+| `just release-info` | Inspect the published release and download URLs |
 | `just commit 'message'` | Commit a completed work chunk |
 | `just status` | Review working tree and recent commits |
 
@@ -74,6 +77,25 @@ The first Android build creates a random password and private signing key in
 updates must use the same key to install over this app. The build never falls
 back to a public debug key. Increment `android.versionCode` in `app.json` when
 shipping an update. `just clean` preserves the signing credentials.
+
+## GitHub releases
+
+Install and authenticate GitHub CLI (`gh`) before publishing. There is no CI build.
+`just release` publishes the existing `dist/torstival.apk`, so it runs quickly.
+It checks the signature, bundled code, service permissions, APK version and clean
+`main` checkout, pushes `main` to `origin`, then creates `v<expo.version>` at that
+commit with the APK attached and notes from `releases/v<expo.version>.md`.
+An existing release is never overwritten.
+
+For the next release, update the version in `app.json` and `package.json`, increment
+Android's versionCode and iOS's buildNumber, run `just deps-lock`, and write the
+version's notes. Run `just build-android` after the final app changes, commit with
+`just commit 'Release version ...'`, then run `just release`. Publishing checks
+the APK version but does not rebuild it or prove its source matches the checkout;
+always rebuild after changing app code, even if the version is unchanged.
+
+Download the APK from the release's **Assets** section. GitHub's automatically
+generated source archives do not include signing keys or local build outputs.
 
 ## Android background operation
 

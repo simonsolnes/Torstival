@@ -211,6 +211,35 @@ artifact-info:
 clean:
     rm -rf android ios build dist .expo modules/pulse/android/build .local-android-build.log .local-android-tests.log .local-ios-pods.log .local-ios-build.log .local-ios-device-build.log
 
+# Push main to this repository's origin without running a cloud build.
+push:
+    git push --set-upstream origin main
+
+# Publish the already-built APK with versioned notes; build locally before releasing.
+release: check verify-apk
+    #!/usr/bin/env bash
+    set -euo pipefail
+    test "$(git branch --show-current)" = main || { echo 'Release from main.' >&2; exit 1; }
+    test -z "$(git status --porcelain)" || { echo 'Commit changes before releasing.' >&2; exit 1; }
+    version="$(node -p "require('./app.json').expo.version")"
+    version_code="$(node -p "require('./app.json').expo.android.versionCode")"
+    tag="v$version"
+    notes="releases/$tag.md"
+    test -f "$notes" || { echo "Write $notes before releasing." >&2; exit 1; }
+    aapt="$(find "$ANDROID_HOME/build-tools" -name aapt -type f | sort | tail -1)"
+    package="$("$aapt" dump badging dist/torstival.apk | sed -n '1p')"
+    [[ "$package" == *"name='no.solnes.torstival'"* && "$package" == *"versionName='$version'"* && "$package" == *"versionCode='$version_code'"* ]] || { echo 'APK version differs from app.json. Run just build-android.' >&2; exit 1; }
+    if gh release view "$tag" >/dev/null 2>&1; then
+      echo "$tag already has a release. Bump the version for a new release." >&2
+      exit 1
+    fi
+    just push
+    gh release create "$tag" dist/torstival.apk --target "$(git rev-parse HEAD)" --title "Torstival $version" --notes-file "$notes" --latest
+
+# Inspect the published release and its downloadable assets.
+release-info:
+    gh release view "v$(node -p "require('./app.json').expo.version")" --json url,tagName,isDraft,assets
+
 # Commit a completed, reviewed work chunk.
 commit message:
     git add --all
