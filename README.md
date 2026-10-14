@@ -27,13 +27,17 @@ The justfile defaults to Homebrew's Apple Silicon JDK 21 and
 | `just build` | Check and build Android plus iOS simulator |
 | `just build-android` | Generate native project, sign and build `dist/torstival.apk` |
 | `just verify-apk` | Verify the APK signature and bundled JavaScript |
+| `just artifact-info` | Show APK version, device support, size and checksum |
 | `just install-android` | Install the APK on an attached Android device |
 | `just build-ios` | Build `dist/Torstival.app` for the iOS simulator |
+| `just verify-ios` | Verify the simulator app contains its JavaScript bundle |
 | `just run-ios` | Install and open the app in a booted simulator |
 | `just screenshot-ios` | Save a simulator screenshot in `dist/` |
 | `just devices` | List connected Android devices and local iOS simulators |
 | `just boot-ios UUID` | Boot a specific iOS simulator |
+| `just shutdown-ios UUID` | Shut down that simulator |
 | `just logs` | Inspect saved native build logs |
+| `just logs-ios UUID` | Inspect app runtime logs in a specific simulator |
 | `just build-ios-device` | Compile an unsigned release build for physical iOS hardware |
 | `just prebuild` | Regenerate both native projects from app config/plugins |
 | `just pods` | Generate iOS project and install CocoaPods dependencies |
@@ -65,6 +69,11 @@ an IPA. Installing on someone else's iPhone requires Apple signing and a chosen
 distribution method; those credentials are not configured here.
 When multiple simulators are booted, pass a UUID to `just run-ios UUID` and
 `just screenshot-ios UUID`.
+
+The app enables `expo-build-properties`' `ios.enableSceneSupport` for Xcode 27
+and iOS 27. Without this opt-in, SDK 57's default app lifecycle compiles but
+crashes at launch on iOS 27. `just verify-ios` checks the built scene manifest.
+See [Expo's scene migration guidance](https://github.com/expo/fyi/blob/main/ios-scene-lifecycle.md#staying-on-sdk-57-with-xcode-27).
 
 ## Maintaining native configuration
 

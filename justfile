@@ -20,6 +20,7 @@ deps-lock:
 
 # Validate TypeScript and the interval timer behavior.
 check: typecheck test
+    git diff --check
 
 typecheck:
     npx --no-install tsc --noEmit
@@ -70,7 +71,7 @@ build-android: android-key prebuild-android
     set -euo pipefail
     export TORSTIVAL_KEYSTORE_PASSWORD="$(cat .local/android-key-password)"
     cd android
-    ./gradlew --no-daemon :app:assembleRelease
+    ./gradlew --no-daemon :app:assembleRelease > ../.local-android-build.log 2>&1 || { tail -100 ../.local-android-build.log; exit 1; }
     cd ..
     mkdir -p dist
     cp android/app/build/outputs/apk/release/app-release.apk dist/torstival.apk
@@ -90,7 +91,7 @@ install-android:
 
 # Install native iOS dependencies locally.
 pods: prebuild-ios prepare-ios
-    cd ios && pod install
+    cd ios && pod install > ../.local-ios-pods.log 2>&1 || { tail -100 ../.local-ios-pods.log; exit 1; }
 
 # Apply the documented Expo intermediate-framework fix after every install.
 prepare-ios:
@@ -101,6 +102,14 @@ build-ios: pods
     xcodebuild -workspace ios/Torstival.xcworkspace -scheme Torstival -configuration Release -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath build/ios CODE_SIGNING_ALLOWED=NO build > .local-ios-build.log 2>&1 || { tail -100 .local-ios-build.log; exit 1; }
     mkdir -p dist
     ditto build/ios/Build/Products/Release-iphonesimulator/Torstival.app dist/Torstival.app
+    just verify-ios
+
+# Confirm the simulator release app includes its offline JavaScript bundle.
+verify-ios:
+    test -s dist/Torstival.app/main.jsbundle
+    /usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' dist/Torstival.app/Info.plist
+    test "$(/usr/libexec/PlistBuddy -c 'Print :UIApplicationSceneManifest:UISceneConfigurations:UIWindowSceneSessionRoleApplication:0:UISceneDelegateClassName' dist/Torstival.app/Info.plist)" = EXExpoAppSceneDelegate
+    file dist/Torstival.app/Torstival
 
 # Compile for physical iOS devices without signing (not an installable IPA).
 build-ios-device: pods
@@ -112,12 +121,16 @@ build: check build-android build-ios
 # Install and launch the built release app in an already booted iOS simulator.
 run-ios device="booted":
     xcrun simctl install {{quote(device)}} dist/Torstival.app
-    xcrun simctl launch {{quote(device)}} no.solnes.torstival
+    xcrun simctl launch --terminate-running-process {{quote(device)}} no.solnes.torstival
 
 # Capture the current iOS screen for visual review.
 screenshot-ios device="booted":
     mkdir -p dist
     xcrun simctl io {{quote(device)}} screenshot dist/ios-screen.png
+
+# Inspect this app's recent simulator runtime logs.
+logs-ios device="booted":
+    xcrun simctl spawn {{quote(device)}} log show --last 5m --predicate 'process == "Torstival"' --style compact
 
 # List local Android devices and available iOS simulators.
 devices:
@@ -129,6 +142,10 @@ boot-ios device:
     xcrun simctl boot {{quote(device)}}
     xcrun simctl bootstatus {{quote(device)}} -b
 
+# Shut down a simulator selected by UUID.
+shutdown-ios device:
+    xcrun simctl shutdown {{quote(device)}}
+
 # Inspect the latest native build output.
 logs:
     #!/usr/bin/env bash
@@ -137,9 +154,18 @@ logs:
       if [ -f "$log" ]; then tail -20 "$log"; fi
     done
 
+# Show the shareable APK's version, supported devices, size, and checksum.
+artifact-info:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    aapt="$(find "$ANDROID_HOME/build-tools" -name aapt -type f | sort | tail -1)"
+    "$aapt" dump badging dist/torstival.apk | rg '^(package:|sdkVersion:|targetSdkVersion:|native-code:|application-debuggable)'
+    ls -lh dist/torstival.apk
+    shasum -a 256 dist/torstival.apk
+
 # Remove only generated build outputs; preserve signing credentials.
 clean:
-    rm -rf android ios build dist .expo .local-ios-build.log .local-ios-device-build.log
+    rm -rf android ios build dist .expo .local-android-build.log .local-ios-pods.log .local-ios-build.log .local-ios-device-build.log
 
 # Commit a completed, reviewed work chunk.
 commit message:
