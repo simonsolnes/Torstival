@@ -65,11 +65,15 @@ internal class PulseHardware(context: Context) {
     catch (_: Exception) { /* The OS can take the camera away; retry at stop. */ }
   }
 
-  fun stop() {
-    torchOff()
-    vibrator.cancel()
-    tone?.stopTone()
-    tone?.release()
-    tone = null
+  fun disableOutputs(vibrate: Boolean, torch: Boolean, sound: Boolean) {
+    if (!torch) torchOff()
+    if (!vibrate) vibrator.cancel()
+    if (!sound) {
+      tone?.stopTone()
+      tone?.release()
+      tone = null
+    }
   }
+
+  fun stop() = disableOutputs(false, false, false)
 }

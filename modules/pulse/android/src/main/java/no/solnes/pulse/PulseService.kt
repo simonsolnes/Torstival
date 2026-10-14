@@ -16,6 +16,7 @@ internal data class PulseState(
   val vibrate: Boolean = true,
   val torch: Boolean = true,
   val sound: Boolean = true,
+  val screen: Boolean = true,
   val warning: String? = null
 )
 
@@ -26,6 +27,8 @@ class PulseService : Service() {
     const val NOTIFICATION_ID = 4101
     private const val CHANNEL = "torstival-interval"
     @Volatile internal var state = PulseState()
+    // Accessed only on the main queue; settings updates never create a service.
+    internal var instance: PulseService? = null
 
     fun snapshot(): Map<String, Any?> {
       val current = state
@@ -34,10 +37,11 @@ class PulseService : Service() {
         "running" to current.running,
         "intervalMs" to current.intervalMs,
         "remainingMs" to if (current.running) maxOf(0, current.deadline - now) else 0,
-        "flashing" to (current.running && current.lastPulse >= 0 && now - current.lastPulse < 120),
+        "flashing" to (current.running && current.screen && current.lastPulse >= 0 && now - current.lastPulse < 120),
         "vibrate" to current.vibrate,
         "torch" to current.torch,
         "sound" to current.sound,
+        "screen" to current.screen,
         "warning" to current.warning
       )
     }
@@ -64,6 +68,7 @@ class PulseService : Service() {
   override fun onCreate() {
     super.onCreate()
     hardware = PulseHardware(this)
+    instance = this
     if (Build.VERSION.SDK_INT >= 26) {
       val channel = NotificationChannel(CHANNEL, "Running interval", NotificationManager.IMPORTANCE_LOW)
       channel.description = "Shows when your interval is running and lets you stop it."
@@ -83,16 +88,9 @@ class PulseService : Service() {
       val torch = requestedTorch && checkSelfPermission(Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED
       state = PulseState(intervalMs = intervalMs, vibrate = intent.getBooleanExtra("vibrate", true), torch = torch,
         sound = intent.getBooleanExtra("sound", true),
+        screen = intent.getBooleanExtra("screen", true),
         warning = if (requestedTorch && !torch) "Camera permission is needed for the flashlight." else null)
-      val notification = notification()
-      if (Build.VERSION.SDK_INT >= 34) {
-        val type = ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE or
-          (if (torch) ServiceInfo.FOREGROUND_SERVICE_TYPE_CAMERA else 0)
-        startForeground(NOTIFICATION_ID, notification, type)
-      } else if (Build.VERSION.SDK_INT >= 29) {
-        val type = if (Build.VERSION.SDK_INT >= 30 && torch) ServiceInfo.FOREGROUND_SERVICE_TYPE_CAMERA else 0
-        startForeground(NOTIFICATION_ID, notification, type)
-      } else startForeground(NOTIFICATION_ID, notification)
+      promoteForeground(torch)
       wakeLock = (getSystemService(POWER_SERVICE) as PowerManager)
         .newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "Torstival:Interval").apply {
           setReferenceCounted(false)
@@ -108,6 +106,35 @@ class PulseService : Service() {
     }
     // Never silently restart after force-stop, process death, or a reboot.
     return START_NOT_STICKY
+  }
+
+  internal fun updateOptions(vibrate: Boolean, requestedTorch: Boolean, sound: Boolean, screen: Boolean) {
+    if (!state.running) return
+    var torch = requestedTorch && checkSelfPermission(Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED
+    var warning: String? = if (requestedTorch && !torch) "Camera permission is needed for the flashlight." else null
+    if (torch != state.torch) {
+      try {
+        // Add camera access while the activity is visible, without replacing the timer.
+        promoteForeground(torch)
+      } catch (_: Exception) {
+        torch = false
+        warning = "Flashlight unavailable. Open the app and try again."
+      }
+    }
+    hardware.disableOutputs(vibrate, torch, sound)
+    state = state.copy(vibrate = vibrate, torch = torch, sound = sound, screen = screen, warning = warning)
+  }
+
+  private fun promoteForeground(torch: Boolean) {
+    val notification = notification()
+    if (Build.VERSION.SDK_INT >= 34) {
+      val type = ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE or
+        (if (torch) ServiceInfo.FOREGROUND_SERVICE_TYPE_CAMERA else 0)
+      startForeground(NOTIFICATION_ID, notification, type)
+    } else if (Build.VERSION.SDK_INT >= 29) {
+      val type = if (Build.VERSION.SDK_INT >= 30 && torch) ServiceInfo.FOREGROUND_SERVICE_TYPE_CAMERA else 0
+      startForeground(NOTIFICATION_ID, notification, type)
+    } else startForeground(NOTIFICATION_ID, notification)
   }
 
   private fun notification(): Notification {
@@ -135,6 +162,6 @@ class PulseService : Service() {
   }
 
   private fun finish() { clearPulse(); stopForeground(STOP_FOREGROUND_REMOVE); stopSelf() }
-  override fun onDestroy() { clearPulse(); super.onDestroy() }
+  override fun onDestroy() { clearPulse(); if (instance === this) instance = null; super.onDestroy() }
   override fun onBind(intent: Intent?): IBinder? = null
 }

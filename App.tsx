@@ -29,8 +29,8 @@ function TimePicker({ label, value, max, disabled, onChange }: {
 
 export default function App() {
   const { minutes, setMinutes, seconds, setSeconds, intervalMs, running, flashing, remainingMs,
-    vibrate, setVibrate, torch, setTorch, sound, setSound, busy, message, active, start, stop } = usePulse();
-  const disabled = busy || (!running && intervalMs === null);
+    options, changeOption, busy, updating, message, active, start, stop } = usePulse();
+  const disabled = busy || (!running && (intervalMs === null || updating));
 
   return (
     <SafeAreaProvider>
@@ -60,13 +60,15 @@ export default function App() {
               </View>
               <View style={styles.options}>
                 {([
-                  ['Vibration', vibrate, setVibrate],
-                  ['Flashlight', torch, setTorch],
-                  ['Sound', sound, setSound],
-                ] as const).map(([label, value, onChange]) => <View key={label} style={styles.option}>
+                  ['Flash screen', 'screen'],
+                  ['Vibration', 'vibrate'],
+                  ['Flashlight', 'torch'],
+                  ['Sound', 'sound'],
+                ] as const).map(([label, key]) => <View key={key} style={styles.option}>
                   <Text style={styles.optionText}>{label}</Text>
-                  <Switch accessibilityLabel={label} value={value} onValueChange={onChange}
-                    disabled={running || busy} trackColor={{ true: '#8c75d2', false: '#343842' }} />
+                  <Switch accessibilityLabel={label} value={options[key]}
+                    onValueChange={value => { void changeOption(key, value); }}
+                    disabled={busy || updating} trackColor={{ true: '#8c75d2', false: '#343842' }} />
                 </View>)}
               </View>
               <Pressable accessibilityRole="button" accessibilityLabel={running ? 'Stop' : 'Start'}

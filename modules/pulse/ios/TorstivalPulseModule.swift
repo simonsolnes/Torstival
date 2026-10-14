@@ -50,6 +50,11 @@ public final class TorstivalPulseModule: Module {
       return true
     }.runOnQueue(.main)
     AsyncFunction("stop") { self.stop() }.runOnQueue(.main)
+    AsyncFunction("updateOptions") { (vibrate: Bool, torch: Bool, sound: Bool, screen: Bool) in
+      if !torch { self.turnOff() }
+      if !sound { self.audio?.stop() }
+      if !vibrate { self.stopHaptics() }
+    }.runOnQueue(.main)
     OnAppEntersBackground { DispatchQueue.main.async { self.stop() } }
     OnDestroy { DispatchQueue.main.async { self.stop() } }
   }
@@ -82,6 +87,10 @@ public final class TorstivalPulseModule: Module {
   private func stop() {
     turnOff()
     audio?.stop()
+    stopHaptics()
+  }
+
+  private func stopHaptics() {
     try? hapticPlayer?.stop(atTime: CHHapticTimeImmediate)
     hapticPlayer = nil
     haptics?.stop(completionHandler: nil)
