@@ -1,6 +1,13 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { FLASH_MS, parseInterval, startFlashes } from './interval.ts';
+import { FLASH_MS, formatCountdown, parseInterval, startFlashes } from './interval.ts';
+
+test('countdown rounds up to tenths and never displays negative time', () => {
+  assert.equal(formatCountdown(2500), '2.5');
+  assert.equal(formatCountdown(2001), '2.1');
+  assert.equal(formatCountdown(1), '0.1');
+  assert.equal(formatCountdown(-50), '0.0');
+});
 
 function fakeClock() {
   let now = 0;
@@ -93,4 +100,16 @@ test('rejects invalid intervals before scheduling', () => {
     assert.throws(() => startFlashes(interval, () => {}, clock), RangeError);
   }
   assert.equal(clock.pending(), 0);
+});
+
+test('countdown shares the actual pulse deadline, including after a stall', () => {
+  const clock = fakeClock();
+  const deadlines: number[] = [];
+  const stop = startFlashes(1000, () => {}, clock, next => deadlines.push(next));
+  assert.deepEqual(deadlines, [1000]);
+  clock.advance(1000);
+  assert.deepEqual(deadlines, [1000, 2000]);
+  clock.stall(2500);
+  assert.deepEqual(deadlines, [1000, 2000, 4000]);
+  stop();
 });

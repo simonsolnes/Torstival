@@ -1,5 +1,9 @@
 export const FLASH_MS = 120;
 
+export function formatCountdown(remainingMs: number): string {
+  return (Math.ceil(Math.max(0, remainingMs) / 100) / 10).toFixed(1);
+}
+
 export function parseInterval(value: string): number | null {
   const normalized = value.trim().replace(',', '.');
   if (!/^\d+(\.\d+)?$/.test(normalized)) return null;
@@ -17,12 +21,13 @@ export type Clock = {
 
 // Keep an absolute deadline so callback delays do not accumulate as drift.
 // If the event loop stalls, skip missed beats instead of flashing in a burst.
-export function startFlashes(intervalMs: number, onFlash: (active: boolean) => void, clock: Clock) {
+export function startFlashes(intervalMs: number, onFlash: (active: boolean) => void, clock: Clock, onDeadline: (deadline: number) => void = () => {}) {
   if (!Number.isFinite(intervalMs) || intervalMs < 1000 || intervalMs > 3_600_000) {
     throw new RangeError('Interval must be between 1 and 3600 seconds.');
   }
   let stopped = false;
   let deadline = clock.now() + intervalMs;
+  onDeadline(deadline);
   let flashEnd: unknown;
   let nextBeat: unknown;
 
@@ -33,6 +38,7 @@ export function startFlashes(intervalMs: number, onFlash: (active: boolean) => v
       if (!stopped) onFlash(false);
     }, FLASH_MS);
     deadline += (Math.floor(Math.max(0, clock.now() - deadline) / intervalMs) + 1) * intervalMs;
+    onDeadline(deadline);
     nextBeat = clock.schedule(tick, Math.max(0, deadline - clock.now()));
   };
 

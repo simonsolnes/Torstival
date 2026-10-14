@@ -3,7 +3,7 @@ import { AppState, Keyboard, Pressable, ScrollView, StyleSheet, Text, TextInput,
 import { StatusBar } from 'expo-status-bar';
 import { useKeepAwake } from 'expo-keep-awake';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
-import { parseInterval, startFlashes, type Clock } from './src/interval';
+import { formatCountdown, parseInterval, startFlashes, type Clock } from './src/interval';
 
 const clock: Clock = {
   now: () => performance.now(),
@@ -20,16 +20,20 @@ export default function App() {
   const [value, setValue] = useState('5');
   const [running, setRunning] = useState(false);
   const [flashing, setFlashing] = useState(false);
+  const [remainingMs, setRemainingMs] = useState(0);
   const intervalMs = parseInterval(value);
   const stop = useCallback(() => { setRunning(false); setFlashing(false); }, []);
 
   useEffect(() => {
     if (!running || intervalMs === null) return;
-    const cancel = startFlashes(intervalMs, setFlashing, clock);
+    let deadline = clock.now() + intervalMs;
+    setRemainingMs(intervalMs);
+    const cancel = startFlashes(intervalMs, setFlashing, clock, next => { deadline = next; });
+    const countdown = setInterval(() => setRemainingMs(Math.max(0, deadline - clock.now())), 50);
     const subscription = AppState.addEventListener('change', state => {
       if (state !== 'active') { cancel(); stop(); }
     });
-    return () => { cancel(); subscription.remove(); };
+    return () => { cancel(); clearInterval(countdown); subscription.remove(); };
   }, [running, intervalMs, stop]);
 
   const start = () => {
@@ -79,6 +83,12 @@ export default function App() {
                   {intervalMs === null ? 'Enter a value from 1 to 3600 seconds.' : running ? 'Your screen will flash at this pace.' : 'Choose any interval from 1 to 3600 seconds.'}
                 </Text>
               </View>
+              {running && <View style={styles.countdown}>
+                <Text style={styles.label}>NEXT PULSE IN</Text>
+                <Text style={styles.countdownValue} accessibilityLabel={`Next pulse in ${formatCountdown(remainingMs)} seconds`}>
+                  {formatCountdown(remainingMs)}<Text style={styles.unit}> s</Text>
+                </Text>
+              </View>}
               <Pressable
                 accessibilityRole="button"
                 accessibilityLabel={running ? 'Stop flashing' : 'Start flashing'}
@@ -123,6 +133,8 @@ const styles = StyleSheet.create({
   unit: { color: '#a5abb7', fontSize: 17 },
   rule: { height: 1, backgroundColor: '#343842', marginVertical: 20 },
   helper: { color: '#a5abb7', fontSize: 12, lineHeight: 19 },
+  countdown: { alignItems: 'center', marginTop: 24, gap: 6 },
+  countdownValue: { color: '#c4b5fd', fontSize: 40, fontWeight: '600', fontVariant: ['tabular-nums'] },
   button: { backgroundColor: '#c4b5fd', borderRadius: 18, minHeight: 64, justifyContent: 'center', alignItems: 'center', marginTop: 20, padding: 16 },
   stopButton: { backgroundColor: '#292333', borderWidth: 1, borderColor: '#77658d' },
   buttonText: { color: '#211a32', fontSize: 18, fontWeight: '700' },
