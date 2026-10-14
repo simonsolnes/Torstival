@@ -7,3 +7,5 @@ Commit completed chunks as you go. Keep signing keys and generated artifacts
 out of Git. Native projects are generated from app.json and config plugins.
 Build release binaries with embedded JavaScript; do not start a development
 server unless the user explicitly asks for one.
+
+Keep README.md to one sentence and release notes to one very short sentence.

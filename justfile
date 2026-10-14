@@ -249,6 +249,10 @@ release: check verify-apk
 release-info:
     gh release view "v$(node -p "require('./app.json').expo.version")" --json url,tagName,isDraft,assets
 
+# Update published notes from the matching one-sentence release file.
+release-notes tag:
+    gh release edit {{quote(tag)}} --notes-file {{quote("releases/" + tag + ".md")}}
+
 # Commit a completed, reviewed work chunk.
 commit message:
     git add --all
