@@ -89,8 +89,12 @@ install-android:
     "$ANDROID_HOME/platform-tools/adb" install -r dist/torstival.apk
 
 # Install native iOS dependencies locally.
-pods: prebuild-ios
+pods: prebuild-ios prepare-ios
     cd ios && pod install
+
+# Apply the documented Expo intermediate-framework fix after every install.
+prepare-ios:
+    node scripts/prepare-ios.cjs
 
 # Build a standalone release app for the iOS simulator; no signing required.
 build-ios: pods
@@ -106,14 +110,32 @@ build-ios-device: pods
 build: check build-android build-ios
 
 # Install and launch the built release app in an already booted iOS simulator.
-run-ios:
-    xcrun simctl install booted dist/Torstival.app
-    xcrun simctl launch booted no.solnes.torstival
+run-ios device="booted":
+    xcrun simctl install {{quote(device)}} dist/Torstival.app
+    xcrun simctl launch {{quote(device)}} no.solnes.torstival
 
 # Capture the current iOS screen for visual review.
-screenshot-ios:
+screenshot-ios device="booted":
     mkdir -p dist
-    xcrun simctl io booted screenshot dist/ios-screen.png
+    xcrun simctl io {{quote(device)}} screenshot dist/ios-screen.png
+
+# List local Android devices and available iOS simulators.
+devices:
+    "$ANDROID_HOME/platform-tools/adb" devices
+    xcrun simctl list devices available
+
+# Boot a simulator by the UUID shown by `just devices`.
+boot-ios device:
+    xcrun simctl boot {{quote(device)}}
+    xcrun simctl bootstatus {{quote(device)}} -b
+
+# Inspect the latest native build output.
+logs:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    for log in .local-android-build.log .local-ios-pods.log .local-ios-build.log .local-ios-device-build.log; do
+      if [ -f "$log" ]; then tail -20 "$log"; fi
+    done
 
 # Remove only generated build outputs; preserve signing credentials.
 clean:

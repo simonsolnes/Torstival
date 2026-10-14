@@ -31,9 +31,13 @@ The justfile defaults to Homebrew's Apple Silicon JDK 21 and
 | `just build-ios` | Build `dist/Torstival.app` for the iOS simulator |
 | `just run-ios` | Install and open the app in a booted simulator |
 | `just screenshot-ios` | Save a simulator screenshot in `dist/` |
+| `just devices` | List connected Android devices and local iOS simulators |
+| `just boot-ios UUID` | Boot a specific iOS simulator |
+| `just logs` | Inspect saved native build logs |
 | `just build-ios-device` | Compile an unsigned release build for physical iOS hardware |
 | `just prebuild` | Regenerate both native projects from app config/plugins |
 | `just pods` | Generate iOS project and install CocoaPods dependencies |
+| `just prepare-ios` | Apply the Expo intermediate-framework signing workaround |
 | `just deps-lock` | Resolve dependencies after editing package.json |
 | `just deps-align` | Align dependency versions to the installed Expo SDK |
 | `just audit` | Inspect dependency security advisories |
@@ -59,6 +63,8 @@ shipping an update. `just clean` preserves the signing credentials.
 `just build-ios-device` compiles for real hardware but does not sign or distribute
 an IPA. Installing on someone else's iPhone requires Apple signing and a chosen
 distribution method; those credentials are not configured here.
+When multiple simulators are booted, pass a UUID to `just run-ios UUID` and
+`just screenshot-ios UUID`.
 
 ## Maintaining native configuration
 
@@ -67,3 +73,10 @@ distribution method; those credentials are not configured here.
 projects. Android release signing is applied by `with-local-signing.cjs`.
 The supported local build approach follows
 [Expo's local release documentation](https://docs.expo.dev/guides/local-app-production/).
+
+`just pods` automatically applies `scripts/prepare-ios.cjs`. ExpoModulesJSI's
+nested build does not inherit the unsigned parent build setting, so this small,
+idempotent patch disables signing of that intermediate framework. This avoids
+code-sign failures from macOS File Provider metadata in a synced Documents
+directory. It does not change app signing. Review/remove the patch when upgrading
+ExpoModulesJSI; it fails explicitly if the expected upstream script changes.
