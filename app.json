@@ -2,16 +2,18 @@
   "expo": {
     "name": "Torstival",
     "slug": "torstival",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "orientation": "portrait",
     "userInterfaceStyle": "dark",
     "ios": {
       "bundleIdentifier": "no.solnes.torstival",
+      "buildNumber": "2",
+      "infoPlist": { "NSCameraUsageDescription": "Torstival uses camera access only to pulse the flashlight. No photos or video are recorded." },
       "supportsTablet": true
     },
     "android": {
       "package": "no.solnes.torstival",
-      "versionCode": 1,
+      "versionCode": 2,
       "blockedPermissions": ["android.permission.RECORD_AUDIO", "android.permission.SYSTEM_ALERT_WINDOW", "android.permission.READ_EXTERNAL_STORAGE", "android.permission.WRITE_EXTERNAL_STORAGE"]
     },
     "plugins": [

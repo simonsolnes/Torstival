@@ -1,0 +1,31 @@
+plugins {
+  id 'com.android.library'
+  id 'expo-module-gradle-plugin'
+}
+
+group = 'no.solnes.pulse'
+version = '1.0.0'
+
+android {
+  namespace 'no.solnes.pulse'
+  defaultConfig {
+    versionCode 1
+    versionName '1.0.0'
+  }
+  testOptions { unitTests.includeAndroidResources = true }
+}
+
+dependencies {
+  testImplementation 'junit:junit:4.13.2'
+  testImplementation 'org.robolectric:robolectric:4.17'
+}
+
+// Expo compiles Android libraries for Java 17; Robolectric's Android 16 runtime
+// needs a Java 21 test JVM independently of that compilation target.
+tasks.withType(Test).configureEach {
+  // Android 16's shared-memory shadow accesses the JDK file descriptor bridge.
+  jvmArgs '--add-opens=java.base/jdk.internal.access=ALL-UNNAMED'
+  javaLauncher = javaToolchains.launcherFor {
+    languageVersion = JavaLanguageVersion.of(21)
+  }
+}

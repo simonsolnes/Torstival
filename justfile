@@ -3,6 +3,7 @@ set shell := ["bash", "-eu", "-o", "pipefail", "-c"]
 export EXPO_NO_TELEMETRY := "1"
 export CI := "1"
 export JAVA_HOME := env_var_or_default("JAVA_HOME", if os() == "macos" { "/opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home" } else { "/usr/lib/jvm/java-21-openjdk-amd64" })
+export TORSTIVAL_TEST_JAVA_HOME := env_var_or_default("TORSTIVAL_TEST_JAVA_HOME", if os() == "macos" { "/opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home" } else { "/usr/lib/jvm/java-21-openjdk-amd64" })
 export ANDROID_HOME := env_var_or_default("ANDROID_HOME", env_var("HOME") / "Library/Android/sdk")
 export PATH := JAVA_HOME / "bin:" + env_var("PATH")
 
@@ -27,6 +28,24 @@ typecheck:
 
 test:
     node --experimental-strip-types --test src/*.test.ts
+
+# Test the real Android service lifecycle on simulated Android 9 and 16 runtimes.
+test-android-native: prebuild-android
+    #!/usr/bin/env bash
+    set -euo pipefail
+    export JAVA_HOME="$TORSTIVAL_TEST_JAVA_HOME"
+    export PATH="$JAVA_HOME/bin:$PATH"
+    cd android
+    ./gradlew --no-daemon :torstival-pulse:testReleaseUnitTest > ../.local-android-tests.log 2>&1 || { tail -120 ../.local-android-tests.log; exit 1; }
+
+# Inspect running foreground service, wake lock and notification on a connected Android phone.
+inspect-android:
+    "$ANDROID_HOME/platform-tools/adb" shell dumpsys activity services no.solnes.torstival
+    "$ANDROID_HOME/platform-tools/adb" shell dumpsys power | rg -i 'Torstival|Wake Locks' || true
+
+# Read runtime errors from a connected Android phone.
+logs-android:
+    "$ANDROID_HOME/platform-tools/adb" logcat -d -s AndroidRuntime TorstivalPulse
 
 # Check that package versions match the installed Expo SDK.
 doctor:
@@ -66,7 +85,10 @@ android-key:
     fi
 
 # Build a standalone, signed universal APK for sharing with Android users.
-build-android: android-key prebuild-android
+build-android: android-key prebuild-android compile-android
+
+# Recompile an already-generated Android project after source-only edits.
+compile-android: android-key
     #!/usr/bin/env bash
     set -euo pipefail
     export TORSTIVAL_KEYSTORE_PASSWORD="$(cat .local/android-key-password)"
@@ -98,7 +120,10 @@ prepare-ios:
     node scripts/prepare-ios.cjs
 
 # Build a standalone release app for the iOS simulator; no signing required.
-build-ios: pods
+build-ios: pods compile-ios
+
+# Recompile an existing iOS simulator project after source-only edits.
+compile-ios:
     xcodebuild -workspace ios/Torstival.xcworkspace -scheme Torstival -configuration Release -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath build/ios CODE_SIGNING_ALLOWED=NO build > .local-ios-build.log 2>&1 || { tail -100 .local-ios-build.log; exit 1; }
     mkdir -p dist
     ditto build/ios/Build/Products/Release-iphonesimulator/Torstival.app dist/Torstival.app
@@ -112,7 +137,10 @@ verify-ios:
     file dist/Torstival.app/Torstival
 
 # Compile for physical iOS devices without signing (not an installable IPA).
-build-ios-device: pods
+build-ios-device: pods compile-ios-device
+
+# Recompile an existing unsigned physical-device project after source-only edits.
+compile-ios-device:
     xcodebuild -workspace ios/Torstival.xcworkspace -scheme Torstival -configuration Release -sdk iphoneos -destination 'generic/platform=iOS' -derivedDataPath build/ios-device CODE_SIGNING_ALLOWED=NO build > .local-ios-device-build.log 2>&1 || { tail -100 .local-ios-device-build.log; exit 1; }
 
 # Build both locally distributable Android and runnable iOS simulator artifacts.
@@ -160,7 +188,7 @@ recover-ios-simulator:
 logs:
     #!/usr/bin/env bash
     set -euo pipefail
-    for log in .local-android-build.log .local-ios-pods.log .local-ios-build.log .local-ios-device-build.log; do
+    for log in .local-android-build.log .local-android-tests.log .local-ios-pods.log .local-ios-build.log .local-ios-device-build.log; do
       if [ -f "$log" ]; then tail -20 "$log"; fi
     done
 
@@ -175,7 +203,7 @@ artifact-info:
 
 # Remove only generated build outputs; preserve signing credentials.
 clean:
-    rm -rf android ios build dist .expo .local-android-build.log .local-ios-pods.log .local-ios-build.log .local-ios-device-build.log
+    rm -rf android ios build dist .expo modules/pulse/android/build .local-android-build.log .local-android-tests.log .local-ios-pods.log .local-ios-build.log .local-ios-device-build.log
 
 # Commit a completed, reviewed work chunk.
 commit message:

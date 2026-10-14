@@ -1,0 +1,19 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+  <uses-permission android:name="android.permission.CAMERA" />
+  <uses-permission android:name="android.permission.VIBRATE" />
+  <uses-permission android:name="android.permission.WAKE_LOCK" />
+  <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+  <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+  <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+  <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CAMERA" />
+  <uses-feature android:name="android.hardware.camera" android:required="false" />
+  <uses-feature android:name="android.hardware.camera.autofocus" android:required="false" />
+  <uses-feature android:name="android.hardware.camera.flash" android:required="false" />
+  <application>
+    <service android:name="no.solnes.pulse.PulseService" android:exported="false"
+      android:stopWithTask="false" android:foregroundServiceType="specialUse|camera">
+      <property android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+        android:value="User-started repeating interval timer delivering vibration and flashlight pulses until explicitly stopped, including while the screen is locked." />
+    </service>
+  </application>
+</manifest>

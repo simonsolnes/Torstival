@@ -1,0 +1,6 @@
+{
+  "name": "torstival-pulse",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Local interval service and flashlight for Torstival"
+}

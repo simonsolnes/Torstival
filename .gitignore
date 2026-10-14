@@ -1,9 +1,10 @@
 node_modules/
 .expo/
-android/
-ios/
+/android/
+/ios/
 dist/
-build/
+**/build/
+**/.gradle/
 .local/
 .local-*.log
 .env*

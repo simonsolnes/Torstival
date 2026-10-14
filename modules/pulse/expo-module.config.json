@@ -1,0 +1,5 @@
+{
+  "platforms": ["apple", "android"],
+  "apple": { "modules": ["TorstivalPulseModule"] },
+  "android": { "modules": ["no.solnes.pulse.TorstivalPulseModule"] }
+}
