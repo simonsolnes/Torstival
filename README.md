@@ -36,7 +36,7 @@ Set `TORSTIVAL_TEST_JAVA_HOME` if your JDK 21 is installed elsewhere.
 | `just build` | Check and build Android plus iOS simulator |
 | `just build-android` | Generate native project, sign and build `dist/torstival.apk` |
 | `just compile-android` | Recompile existing Android project after source-only edits |
-| `just verify-apk` | Verify the APK signature and bundled JavaScript |
+| `just verify-apk` | Verify APK signing, bundled JavaScript, background service and permissions |
 | `just artifact-info` | Show APK version, device support, size and checksum |
 | `just install-android` | Install the APK on an attached Android device |
 | `just build-ios` | Build `dist/Torstival.app` for the iOS simulator |

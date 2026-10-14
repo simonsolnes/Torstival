@@ -99,13 +99,19 @@ compile-android: android-key
     cp android/app/build/outputs/apk/release/app-release.apk dist/torstival.apk
     just verify-apk
 
-# Verify release signing and embedded JavaScript in the shareable APK.
+# Verify release signing, embedded JavaScript, and the background service in the APK.
 verify-apk:
     #!/usr/bin/env bash
     set -euo pipefail
     apksigner="$(find "$ANDROID_HOME/build-tools" -name apksigner -type f | sort | tail -1)"
     "$apksigner" verify --verbose dist/torstival.apk
     unzip -l dist/torstival.apk | rg 'assets/index.android.bundle'
+    aapt="$(find "$ANDROID_HOME/build-tools" -name aapt -type f | sort | tail -1)"
+    manifest="$("$aapt" dump xmltree dist/torstival.apk AndroidManifest.xml)"
+    rg -Fq '"no.solnes.pulse.PulseService"' <<< "$manifest"
+    for permission in CAMERA VIBRATE WAKE_LOCK FOREGROUND_SERVICE FOREGROUND_SERVICE_SPECIAL_USE FOREGROUND_SERVICE_CAMERA; do
+      rg -Fq "\"android.permission.$permission\"" <<< "$manifest"
+    done
 
 # Install on an attached Android phone (USB debugging enabled).
 install-android:
