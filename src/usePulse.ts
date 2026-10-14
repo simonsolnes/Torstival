@@ -1,19 +1,20 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { AppState, PermissionsAndroid, Platform, Vibration } from 'react-native';
+import { AppState, PermissionsAndroid, Platform } from 'react-native';
 import { requireNativeModule } from 'expo';
-import { parseInterval, startFlashes, type Clock } from './interval';
+import { pickerInterval, startFlashes, type Clock } from './interval';
 
 type Snapshot = {
   running: boolean; intervalMs: number; remainingMs: number; flashing: boolean;
-  vibrate: boolean; torch: boolean; warning: string | null;
+  vibrate: boolean; torch: boolean; sound: boolean; warning: string | null;
 };
 const native = requireNativeModule<{
   hasTorch(): boolean;
   getState(): Snapshot;
-  start(intervalMs: number, vibrate: boolean, torch: boolean): Promise<void>;
+  start(intervalMs: number, vibrate: boolean, torch: boolean, sound: boolean): Promise<void>;
   stop(): Promise<void>;
   requestTorchPermission(): Promise<boolean>;
   pulseTorch(): Promise<boolean>;
+  pulseFeedback(vibrate: boolean, sound: boolean): Promise<void>;
 }>('TorstivalPulse');
 const android = Platform.OS === 'android';
 const clock: Clock = {
@@ -23,12 +24,14 @@ const clock: Clock = {
 };
 
 export function usePulse() {
-  const [value, setValue] = useState('5');
+  const [minutes, setMinutes] = useState(5);
+  const [seconds, setSeconds] = useState(0);
   const [running, setRunning] = useState(false);
   const [flashing, setFlashing] = useState(false);
   const [remainingMs, setRemainingMs] = useState(0);
   const [vibrate, setVibrate] = useState(true);
   const [torch, setTorch] = useState(true);
+  const [sound, setSound] = useState(true);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [nativeWarning, setNativeWarning] = useState<string | null>(null);
@@ -36,13 +39,12 @@ export function usePulse() {
   const mounted = useRef(true);
   const operation = useRef(0);
   const cancelTimer = useRef<(() => void) | null>(null);
-  const intervalMs = parseInterval(value);
+  const intervalMs = pickerInterval(minutes, seconds);
 
   const stop = useCallback(async () => {
     operation.current++;
     cancelTimer.current?.();
     cancelTimer.current = null;
-    Vibration.cancel();
     setRunning(false);
     setFlashing(false);
     setRemainingMs(0);
@@ -62,7 +64,6 @@ export function usePulse() {
           cancelTimer.current?.();
           cancelTimer.current = null;
           setRunning(false);
-          Vibration.cancel();
           void native.stop().catch(() => {});
         }
       }
@@ -72,7 +73,7 @@ export function usePulse() {
       operation.current++;
       subscription.remove();
       cancelTimer.current?.();
-      if (!android) { Vibration.cancel(); void native.stop().catch(() => {}); }
+      if (!android) void native.stop().catch(() => {});
     };
   }, []);
 
@@ -86,9 +87,11 @@ export function usePulse() {
       setFlashing(state.flashing);
       setRemainingMs(state.remainingMs);
       if (state.running) {
-        setValue(String(state.intervalMs / 1000));
+        setMinutes(Math.floor(state.intervalMs / 60_000));
+        setSeconds(Math.floor(state.intervalMs / 1000) % 60);
         setVibrate(state.vibrate);
         setTorch(state.torch);
+        setSound(state.sound);
       }
       setNativeWarning(state.warning);
     };
@@ -105,7 +108,9 @@ export function usePulse() {
     const cancel = startFlashes(intervalMs, flash => {
       setFlashing(flash);
       if (!flash || AppState.currentState !== 'active') return;
-      if (vibrate) Vibration.vibrate();
+      if (vibrate || sound) void native.pulseFeedback(vibrate, sound).catch(() => {
+        if (!cancelled) setMessage('Sound or vibration unavailable.');
+      });
       if (torch) void native.pulseTorch().then(ok => {
         if (!ok && !cancelled) setMessage('Flashlight unavailable. It may be in use or too warm.');
       }).catch(() => { if (!cancelled) setMessage('Flashlight unavailable.'); });
@@ -115,12 +120,11 @@ export function usePulse() {
       cancelled = true;
       cancel();
       clearInterval(countdown);
-      Vibration.cancel();
       void native.stop().catch(() => {});
     };
     cancelTimer.current = cleanup;
     return () => { cleanup(); cancelTimer.current = null; };
-  }, [running, intervalMs, vibrate, torch, active]);
+  }, [running, intervalMs, vibrate, torch, sound, active]);
 
   const start = async () => {
     if (intervalMs === null || busy) return;
@@ -157,13 +161,14 @@ export function usePulse() {
       }
       setTorch(useTorch);
       setMessage(notices.length ? notices.join(' ') : null);
-      if (android) await native.start(intervalMs, vibrate, useTorch);
+      if (android) await native.start(intervalMs, vibrate, useTorch, sound);
       else setRunning(true);
     } catch {
       if (mounted.current) setMessage('Could not start the interval. Keep the app open and try again.');
     } finally { if (mounted.current) setBusy(false); }
   };
 
-  return { value, setValue, intervalMs, running, flashing, remainingMs, vibrate, setVibrate,
-    torch, setTorch, busy, message: [message, nativeWarning].filter(Boolean).join(' ') || null, active, start, stop };
+  const changeMinutes = (next: number) => { setMinutes(next); if (next === 60) setSeconds(0); };
+  return { minutes, setMinutes: changeMinutes, seconds, setSeconds, intervalMs, running, flashing, remainingMs, vibrate, setVibrate,
+    torch, setTorch, sound, setSound, busy, message: [message, nativeWarning].filter(Boolean).join(' ') || null, active, start, stop };
 }

@@ -19,6 +19,14 @@ setup:
 deps-lock:
     npm install
 
+# Add an Expo-compatible dependency and update the lockfile.
+deps-add package:
+    npx --no-install expo install {{quote(package)}}
+
+# Regenerate the short bundled iOS beep from its deterministic waveform.
+generate-beep:
+    node scripts/generate-beep.cjs
+
 # Validate TypeScript and the interval timer behavior.
 check: typecheck test
     git diff --check
@@ -138,6 +146,7 @@ compile-ios:
 # Confirm the simulator release app includes its offline JavaScript bundle.
 verify-ios:
     test -s dist/Torstival.app/main.jsbundle
+    test -s dist/Torstival.app/torstival-beep.wav
     /usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' dist/Torstival.app/Info.plist
     test "$(/usr/libexec/PlistBuddy -c 'Print :UIApplicationSceneManifest:UISceneConfigurations:UIWindowSceneSessionRoleApplication:0:UISceneDelegateClassName' dist/Torstival.app/Info.plist)" = EXExpoAppSceneDelegate
     file dist/Torstival.app/Torstival

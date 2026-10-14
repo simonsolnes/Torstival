@@ -4,6 +4,8 @@ import android.content.Context
 import android.hardware.camera2.CameraCharacteristics
 import android.hardware.camera2.CameraManager
 import android.media.AudioAttributes
+import android.media.AudioManager
+import android.media.ToneGenerator
 import android.os.Build
 import android.os.VibrationEffect
 import android.os.Vibrator
@@ -14,6 +16,7 @@ internal class PulseHardware(context: Context) {
   private val vibrator = context.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
   private var torchId: String? = null
   private var torchOn = false
+  private var tone: ToneGenerator? = null
 
   fun hasTorch(): Boolean = findTorch() != null
 
@@ -25,17 +28,17 @@ internal class PulseHardware(context: Context) {
     }
   } catch (_: Exception) { null }
 
-  fun pulse(vibrate: Boolean, torch: Boolean): String? {
+  fun pulse(vibrate: Boolean, torch: Boolean, sound: Boolean): String? {
     var warning: String? = null
     if (vibrate) {
       try {
         if (vibrator.hasVibrator()) {
           val attributes = AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_ALARM).build()
           if (Build.VERSION.SDK_INT >= 26) {
-            vibrator.vibrate(VibrationEffect.createOneShot(120, VibrationEffect.DEFAULT_AMPLITUDE), attributes)
+            vibrator.vibrate(VibrationEffect.createOneShot(450, 255), attributes)
           } else {
             @Suppress("DEPRECATION")
-            vibrator.vibrate(120, attributes)
+            vibrator.vibrate(450, attributes)
           }
         } else warning = "This device has no vibration motor."
       } catch (_: Exception) { warning = "Vibration is unavailable. Check the device settings." }
@@ -47,6 +50,12 @@ internal class PulseHardware(context: Context) {
         else { cameras.setTorchMode(id, true); torchOn = true }
       } catch (_: Exception) { warning = "Flashlight unavailable. It may be in use by another app." }
     }
+    if (sound) {
+      try {
+        val generator = tone ?: ToneGenerator(AudioManager.STREAM_MUSIC, 85).also { tone = it }
+        if (!generator.startTone(ToneGenerator.TONE_PROP_BEEP, 180)) warning = "Sound unavailable."
+      } catch (_: Exception) { warning = "Sound unavailable. Check media volume." }
+    }
     return warning
   }
 
@@ -56,5 +65,11 @@ internal class PulseHardware(context: Context) {
     catch (_: Exception) { /* The OS can take the camera away; retry at stop. */ }
   }
 
-  fun stop() { torchOff(); vibrator.cancel() }
+  fun stop() {
+    torchOff()
+    vibrator.cancel()
+    tone?.stopTone()
+    tone?.release()
+    tone = null
+  }
 }

@@ -1,16 +1,15 @@
 export const FLASH_MS = 120;
 
 export function formatCountdown(remainingMs: number): string {
-  return (Math.ceil(Math.max(0, remainingMs) / 100) / 10).toFixed(1);
+  const seconds = Math.ceil(Math.max(0, remainingMs) / 1000);
+  return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
 }
 
-export function parseInterval(value: string): number | null {
-  const normalized = value.trim().replace(',', '.');
-  if (!/^\d+(\.\d+)?$/.test(normalized)) return null;
-  const seconds = Number(normalized);
-  return Number.isFinite(seconds) && seconds >= 1 && seconds <= 3600
-    ? Math.round(seconds * 1000)
-    : null;
+export function pickerInterval(minutes: number, seconds: number): number | null {
+  if (!Number.isInteger(minutes) || !Number.isInteger(seconds) ||
+    minutes < 0 || minutes > 60 || seconds < 0 || seconds > 59) return null;
+  const total = minutes * 60 + seconds;
+  return total >= 1 && total <= 3600 ? total * 1000 : null;
 }
 
 export type Clock = {

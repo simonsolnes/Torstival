@@ -1,13 +1,13 @@
 # Torstival
 
 A single-screen Expo / React Native interval flasher for Android and iOS.
-Set an interval in seconds, then press **Start**. A live countdown shows the time
-until the next pulse. The screen and rear flashlight flash for 120 ms on each
-beat, with vibration. Vibration and flashlight have separate switches.
-**Stop** cancels the timer, turns off the flashlight and clears the screen flash.
-Intervals accept decimals (including decimal commas), from 1 to 3600 seconds.
-The screen stays awake while the running app is visible. On Android, vibration
-and flashlight continue after leaving the app or locking the screen; on iOS,
+Pick minutes and seconds (default **5:00**), then press **Start**. A live countdown
+shows minutes and seconds until the next pulse. The screen and rear flashlight
+flash for 120 ms on each beat. Vibration, flashlight and sound have separate
+switches, enabled initially. **Stop** cancels all feedback.
+Intervals range from 0:01 to 60:00; choosing 60 minutes sets seconds to zero.
+The screen stays awake while the running app is visible. On Android, vibration,
+sound and flashlight continue after leaving the app or locking the screen; on iOS,
 leaving the app stops the pulses. Change the interval and switches while stopped.
 
 ## Repository commands
@@ -57,6 +57,8 @@ Set `TORSTIVAL_TEST_JAVA_HOME` if your JDK 21 is installed elsewhere.
 | `just pods` | Generate iOS project and install CocoaPods dependencies |
 | `just prepare-ios` | Apply the Expo intermediate-framework signing workaround |
 | `just deps-lock` | Resolve dependencies after editing package.json |
+| `just deps-add PACKAGE` | Add an Expo-compatible dependency |
+| `just generate-beep` | Regenerate the bundled iOS beep waveform |
 | `just deps-align` | Align dependency versions to the installed Expo SDK |
 | `just audit` | Inspect dependency security advisories |
 | `just clean` | Remove generated output while preserving signing keys |
@@ -120,6 +122,13 @@ screen/vibration operation available. Another app using the camera, thermal
 limits, or device settings may prevent a flashlight pulse. Android 13+ also asks
 to show the running notification; if denied, reopen Torstival to stop it (or use
 Android's Active apps controls). Vibration depends on hardware and device settings.
+
+Vibration requests a 450 ms pulse at maximum amplitude on Android, and a 450 ms
+full-intensity Core Haptics event on supported iPhones (system vibration fallback
+otherwise). Actual strength is limited by the device. The short beep uses Android
+media volume; on iOS it respects volume and the silent switch. No volume or Do Not
+Disturb settings are changed. The original iOS beep is bundled with the app and
+can be regenerated using `just generate-beep`; no audio is downloaded at runtime.
 
 The service declares `specialUse` for the repeating user-started timer, and
 adds the `camera` type when flashlight access is enabled. Any future Play Store

@@ -1,12 +1,14 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { FLASH_MS, formatCountdown, parseInterval, startFlashes } from './interval.ts';
+import { FLASH_MS, formatCountdown, pickerInterval, startFlashes } from './interval.ts';
 
-test('countdown rounds up to tenths and never displays negative time', () => {
-  assert.equal(formatCountdown(2500), '2.5');
-  assert.equal(formatCountdown(2001), '2.1');
-  assert.equal(formatCountdown(1), '0.1');
-  assert.equal(formatCountdown(-50), '0.0');
+test('countdown uses minutes and seconds, rounding up without going negative', () => {
+  assert.equal(formatCountdown(300_000), '5:00');
+  assert.equal(formatCountdown(60_001), '1:01');
+  assert.equal(formatCountdown(60_000), '1:00');
+  assert.equal(formatCountdown(59_001), '1:00');
+  assert.equal(formatCountdown(1), '0:01');
+  assert.equal(formatCountdown(-50), '0:00');
 });
 
 function fakeClock() {
@@ -40,14 +42,15 @@ function fakeClock() {
   };
 }
 
-test('validates seconds, decimals and Norwegian decimal commas', () => {
-  for (const value of ['', '0', '-1', '0.5', '3601', 'Infinity', 'NaN', '1e2', '1.2.3', '2 seconds']) {
-    assert.equal(parseInterval(value), null, value);
+test('picker supports five minutes, seconds-only intervals, and the one-hour limit', () => {
+  for (const [minutes, seconds] of [[0, 0], [-1, 30], [0, 60], [60, 1], [61, 0], [0, 1.5], [NaN, 1], [0, Infinity]]) {
+    assert.equal(pickerInterval(minutes, seconds), null);
   }
-  assert.equal(parseInterval(' 1 '), 1000);
-  assert.equal(parseInterval('2.5'), 2500);
-  assert.equal(parseInterval('2,5'), 2500);
-  assert.equal(parseInterval('3600'), 3_600_000);
+  assert.equal(pickerInterval(5, 0), 300_000);
+  assert.equal(pickerInterval(0, 1), 1000);
+  assert.equal(pickerInterval(0, 30), 30_000);
+  assert.equal(pickerInterval(1, 30), 90_000);
+  assert.equal(pickerInterval(60, 0), 3_600_000);
 });
 
 test('waits one interval, flashes briefly, and repeats on the original cadence', () => {

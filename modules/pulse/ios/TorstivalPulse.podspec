@@ -12,4 +12,5 @@ Pod::Spec.new do |s|
   s.static_framework = true
   s.dependency 'ExpoModulesCore'
   s.source_files = '**/*.swift'
+  s.resources = 'torstival-beep.wav'
 end

@@ -7,6 +7,8 @@ import android.content.Context
 import android.content.Intent
 import android.os.Looper
 import android.os.PowerManager
+import android.os.Vibrator
+import org.robolectric.shadows.ShadowToneGenerator
 import org.junit.After
 import org.junit.Assert.*
 import org.junit.Before
@@ -35,9 +37,41 @@ class PulseServiceTest {
   }
   @After fun cleanup() { controller.destroy() }
 
-  private fun start(interval: Long = 1000, torch: Boolean = false): Int = service.onStartCommand(
+  private fun start(interval: Long = 1000, torch: Boolean = false, sound: Boolean = false, vibrate: Boolean = false): Int = service.onStartCommand(
     Intent(service, PulseService::class.java).setAction(PulseService.START)
-      .putExtra("intervalMs", interval).putExtra("vibrate", false).putExtra("torch", torch), 0, 1)
+      .putExtra("intervalMs", interval).putExtra("vibrate", vibrate).putExtra("torch", torch)
+      .putExtra("sound", sound), 0, 1)
+
+  @Test fun soundFollowsTheNativeCadenceAndStopsWithTheSession() {
+    start(sound = true)
+    assertEquals(true, PulseService.snapshot()["sound"])
+    assertTrue(ShadowToneGenerator.getPlayedTones().isEmpty())
+    shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(1))
+    assertEquals(1, ShadowToneGenerator.getPlayedTones().size)
+    assertEquals(Duration.ofMillis(180), ShadowToneGenerator.getPlayedTones().single().duration())
+    service.onStartCommand(Intent(service, PulseService::class.java).setAction(PulseService.STOP), 0, 2)
+    shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(5))
+    assertEquals(1, ShadowToneGenerator.getPlayedTones().size)
+  }
+
+  @Test fun soundOffStaysSilentAndIsRestoredInTheSnapshot() {
+    start(sound = false)
+    shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(3))
+    assertEquals(false, PulseService.snapshot()["sound"])
+    assertTrue(ShadowToneGenerator.getPlayedTones().isEmpty())
+  }
+
+  @Test fun strongerVibrationLasts450MillisecondsAndStopCancelsIt() {
+    val vibrator = shadowOf(service.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator)
+    vibrator.setHasVibrator(true)
+    start(vibrate = true)
+    shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(1))
+    assertTrue(vibrator.isVibrating)
+    assertEquals(450L, vibrator.milliseconds)
+    service.onStartCommand(Intent(service, PulseService::class.java).setAction(PulseService.STOP), 0, 2)
+    assertFalse(vibrator.isVibrating)
+    assertTrue(vibrator.isCancelled)
+  }
 
   @Test fun timerRunsWithoutAnyActivityOrJavascriptAndDoesNotAutoRestart() {
     assertEquals(Service.START_NOT_STICKY, start())

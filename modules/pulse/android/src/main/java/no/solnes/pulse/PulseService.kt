@@ -9,12 +9,13 @@ import android.os.*
 
 internal data class PulseState(
   val running: Boolean = false,
-  val intervalMs: Long = 5000,
+  val intervalMs: Long = 300_000,
   val deadline: Long = 0,
   val lastPulse: Long = -1,
   val pulseCount: Long = 0,
   val vibrate: Boolean = true,
   val torch: Boolean = true,
+  val sound: Boolean = true,
   val warning: String? = null
 )
 
@@ -36,6 +37,7 @@ class PulseService : Service() {
         "flashing" to (current.running && current.lastPulse >= 0 && now - current.lastPulse < 120),
         "vibrate" to current.vibrate,
         "torch" to current.torch,
+        "sound" to current.sound,
         "warning" to current.warning
       )
     }
@@ -52,7 +54,7 @@ class PulseService : Service() {
       val now = SystemClock.elapsedRealtime()
       timer.advance(now)
       state = state.copy(lastPulse = now, deadline = timer.deadline, pulseCount = state.pulseCount + 1)
-      val warning = hardware.pulse(state.vibrate, state.torch)
+      val warning = hardware.pulse(state.vibrate, state.torch, state.sound)
       if (warning != null) state = state.copy(warning = warning)
       handler.postDelayed(torchOff, 120)
       handler.postDelayed(this, maxOf(1, timer.deadline - SystemClock.elapsedRealtime()))
@@ -80,6 +82,7 @@ class PulseService : Service() {
       val requestedTorch = intent.getBooleanExtra("torch", true)
       val torch = requestedTorch && checkSelfPermission(Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED
       state = PulseState(intervalMs = intervalMs, vibrate = intent.getBooleanExtra("vibrate", true), torch = torch,
+        sound = intent.getBooleanExtra("sound", true),
         warning = if (requestedTorch && !torch) "Camera permission is needed for the flashlight." else null)
       val notification = notification()
       if (Build.VERSION.SDK_INT >= 34) {
